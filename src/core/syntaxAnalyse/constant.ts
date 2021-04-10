@@ -1,0 +1,1 @@
+export const EMPTY = 'ε'; // 空字

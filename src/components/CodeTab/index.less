@@ -1,0 +1,30 @@
+.code-tab {
+  .ant-tabs-tabpane {
+    display: flex;
+    max-height: calc(100vh - 32px - 51px - 8px);
+    overflow-y: auto;
+    padding: 0 5px;
+
+    .react-codemirror2 {
+      width: 100%;
+
+      height: 100%;
+      .CodeMirror {
+        height: 100%;
+        border-radius: 3px;
+      }
+    }
+  }
+}
+
+.default {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+}
+
+.father {
+  --color: red;
+  color: var(--color);
+}
