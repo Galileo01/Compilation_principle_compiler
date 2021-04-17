@@ -3,11 +3,12 @@ import mermaid from 'mermaid';
 import { generateGraphGrammer } from './utils';
 interface Props {
   analyseSponser: string[];
+  T: string[]
 }
-
-const SyntaxTree: React.FC<Props> = ({ analyseSponser }) => {
-  const graphContent = generateGraphGrammer(analyseSponser);
-  // console.log(graphContent);
+//语法树组件
+const SyntaxTree: React.FC<Props> = ({ analyseSponser, T }) => {
+  const graphContent = generateGraphGrammer(analyseSponser, T);
+  console.log(graphContent);
 
   //更新刷新 树
   useEffect(() => {

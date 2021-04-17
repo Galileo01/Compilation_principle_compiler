@@ -118,9 +118,7 @@ export type FRItem = {
 // 产生式 定义
 export class Sponser {
   candidateList: Candidate[] = []; // 候选式 数组
-
-  firstRelation: string[] = []; // 暂时没有求出 的相关first
-
+  firstRelation: string[][] = [];//二维数组，对应 不同候选式 的相关First
   followRelation: FRItem[] = []; //  相关 follow
 
   First: Set<string> = new Set(); // First 集合
