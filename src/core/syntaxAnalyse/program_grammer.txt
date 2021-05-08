@@ -1,0 +1,203 @@
+         program
+                  : func_block main() complicated_statement
+                  ;
+       func_type
+                  : int
+                  | char
+                  | float
+                  | void
+                  ;
+      common_type
+                  : int | char | float
+                  ;
+     func_define
+                  : func_type id ( func_params_list ) complicated_statement
+                  ;
+func_params_list
+                  : func_params
+                  | ε
+                  ;
+     func_params
+                  : common_type id func_params'
+                  ;
+      func_block
+                  : func_define func_block
+                  | ε
+                  ;
+    func_params'
+                  : ε
+                  | , func_params
+                  ;
+         if_statement
+                       : if ( bool_exp ) { statement } if_statement' 
+                       ;
+            statement 
+                       : declare_statement
+                       | execute_statement
+                       ;
+    declare_statement 
+                       : value_declare
+                       | ε
+                       ;
+        value_declare
+                       : const_declare
+                       | var_declare
+                       ;
+        const_declare
+                       : const common_type const_declare_list
+                       ;
+          common_type
+                       : int
+                       | char
+                       | float
+                       ;
+   const_declare_list
+                       : id = const_val const_declare_list'
+                       ;
+          var_declare
+                       : int var_declare_list
+                       | char var_declare_list
+                       | float var_declare_list
+                       ;
+     var_declare_list
+                       : s_var_declare var_declare_list'
+                       ;
+        s_var_declare
+                       : var_val s_var_declare'
+                       ;
+    execute_statement
+                       : set_statement
+                       | control_statement
+                       | complicated_statement
+                       ;
+        set_statement
+                       : set_exp ;
+                       ;
+        return_statement 
+                        : return return_statement' ;
+                        ;
+        return_statement'
+                        : bool_exp
+                        | ε
+                        ;                
+    control_statement
+                       : if_statement
+                       | return_statement
+                       ;
+complicated_statement
+                       : { statement_table }
+                       ;
+      statement_table
+                       : const common_type const_declare_list statement_table'
+                       | int var_declare_list statement_table'
+                       | char var_declare_list statement_table'
+                       | float var_declare_list statement_table'
+                       | ε
+                       | set_exp statement_table'
+                       | if_statement statement_table'
+                       | { statement_table } statement_table'
+                       | return return_statement' ; statement_table'
+                       ;
+  const_declare_list'
+                       : ;
+                       | , const_declare_list
+                       ;
+    var_declare_list'
+                       : ;
+                       | , var_declare_list
+                       ;
+       s_var_declare'
+                       : ε
+                       | = bool_exp
+                       ;
+
+     statement_table'
+                       : ε
+                       | const common_type const_declare_list statement_table'
+                       | int var_declare_list statement_table'
+                       | char var_declare_list statement_table'
+                       | float var_declare_list statement_table'
+                       | set_exp statement_table'
+                       | if ( bool_exp ) { statement } if_statement' statement_table'
+                       | { statement_table } statement_table'
+                       | return return_statement' ; statement_table'
+                       ;
+        if_statement'
+                       : ε
+                       | else { statement }
+                       ;
+set_exp
+            : id = bool_exp
+            ;
+bool_exp
+              : T bool_exp'
+              ;
+T
+          : F T'
+          ;
+F
+              : arith_exp F'
+              | ! F
+              | true
+              | false
+              ;
+rela_oprator
+              : <
+              | >
+              | <=
+              | >=
+              | ==
+              | !=
+              ;
+F'
+              : rela_oprator arith_exp
+              | ε                
+              ;
+bool_exp'
+              : || T bool_exp'
+              | ε
+              ;                
+T'
+              : && F T'
+              | ε
+              ;
+arith_exp
+    : H arith_exp'
+    ;
+arith_exp'
+    : + H arith_exp'
+    | - H arith_exp'
+    | ε
+    ;
+H
+    : G H'
+    ;
+H'
+    : * G H'
+    | / G H'
+    | % G H'
+    | ε
+    ;
+G
+    : ( arith_exp )
+    | var_val
+    | num_const
+    | func_call
+    ;
+var_val
+            : id
+            ;
+func_call 
+            : id ( actual_params_list ) 
+            ;
+actual_params_list 
+                    : actual_param
+                    | ε
+                    ;
+actual_param 
+              : bool_exp actual_param'
+              ;
+actual_param'
+            : ε
+            | , actual_param
+            ;    

@@ -1,23 +1,24 @@
 import React, { useState, useMemo, memo } from 'react';
 import { exec } from 'child_process';
-import { Row, Col, Select, Button, notification } from 'antd';
+import { Row, Col, Select, Button, notification, Empty } from 'antd';
 import iconv from 'iconv-lite';
 import recognizer from '../../core/lexicalAnalyse';
 import { RegResults } from '../../types/compiler';
 import { FileInfo } from '../../types/common';
-import TokenTable from '../../components/TokenTable';
+import LexicalResult from '../../components/LexicalResult';
 import { detailStdout } from './utils';
 const { Option } = Select;
 import './index.less';
+interface Props {
+  fileinfo: FileInfo;
+  dispatch: Function;
+}
 
-const LexicalAnalyseTab: React.FC<{ fileinfo: FileInfo }> = ({ fileinfo }) => {
+const LexicalAnalyseTab: React.FC<Props> = ({ fileinfo, dispatch }) => {
   // 词法分析的 方式
   const [LA_method, setMethod] = useState<'manual' | 'auto'>('manual');
   // 统一的 分析结果
-  const [lexicalResult, setResult] = useState<RegResults>({
-    success: true,
-    data: [],
-  });
+  const [lexicalResult, setResult] = useState<RegResults | null>(null);
   // 手动 分析
   function manualLexAnalyse() {
     const result = recognizer(fileinfo.content);
@@ -26,6 +27,10 @@ const LexicalAnalyseTab: React.FC<{ fileinfo: FileInfo }> = ({ fileinfo }) => {
     if (result.success) {
       notification.success({
         message: '分析成功',
+      });
+      dispatch({
+        type: 'UPDATE_TOKENLIST',
+        payload: result.data,
       });
       // setState('success');
     } else {
@@ -81,9 +86,10 @@ const LexicalAnalyseTab: React.FC<{ fileinfo: FileInfo }> = ({ fileinfo }) => {
   }
   // 重置 结果
   function resetResult() {
-    setResult({
-      data: [],
-      success: false,
+    setResult(null);
+    dispatch({
+      type: 'UPDATE_TOKENLIST',
+      payload: [],
     });
   }
   // 文件是否已经选择
@@ -109,7 +115,7 @@ const LexicalAnalyseTab: React.FC<{ fileinfo: FileInfo }> = ({ fileinfo }) => {
         </Col>
       </Row>
       {/* token 列表 */}
-      <TokenTable lexicalResult={lexicalResult} />
+      {lexicalResult ? <LexicalResult lexicalResult={lexicalResult} /> : <Empty />}
     </>
   );
 };

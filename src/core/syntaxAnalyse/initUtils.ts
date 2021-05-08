@@ -5,12 +5,15 @@ import { Candidate, Sponser, FRItem, SponserObject } from '../../types/compiler'
 import { EMPTY } from './constant';
 import fs from 'fs';
 import path from 'path';
-
+// const fileContent = fs.readFileSync('./src/core/syntaxAnalyse/' + syntaxPath, 'utf-8');//拼接 路径  
 // 从文件读取文法
 export function readGrammar(syntaxPath: string) {
-  const fileContent = fs.readFileSync(path.join(__dirname, './' + syntaxPath), 'utf-8');//拼接 路径  
+  // console.log(__filename);
+
+  // const fileContent = fs.readFileSync(path.join(__dirname, './' + syntaxPath), 'utf-8');//拼接 路径  
+  const fileContent = fs.readFileSync('./src/core/syntaxAnalyse/' + syntaxPath, 'utf-8');//拼接 路径  
   // const fileContent = fs.readFileSync('./test.txt', 'utf-8');
-  const lines = fileContent.split('\r\n').map((item) => item.trim()); // 读取每一行的 内容
+  const lines = fileContent.split('\r\n').map((item) => item.trim()); // 读取每一行的 内容 ,换行LF 对应\r\n ，CRLF \n
   const sponserObject: SponserObject = {};
   let start = ''; // 记录起始符号
   let curNon = ''; // 当前正在处理的 非终结符
@@ -58,7 +61,7 @@ export function generateFirst(sponserObject: SponserObject) {
       const firstRelationListItem: string[] = [];//列表项 保存每个候选式子的 FirstRelation
       for (const char of candidate) {
         firstRelationListItem.push(char);
-        if (isNon(sponserObject, char)) break; // 一直向相关 first push 元素，直到 遇到非终结符（非终结符也要 push ）
+        if (!isNon(sponserObject, char)) break; // 一直向相关 first push 元素，直到 遇到 终结符（ 终结符也要 push ）
       }
       sponser.firstRelation.push(firstRelationListItem); // 保存
     }
@@ -83,51 +86,56 @@ export function generateFirst(sponserObject: SponserObject) {
             && !isRelationEmpty(sponserObject, Xi, 'FTR')
           ) {
             // console.log('continue');
-            continue; // 跳过 没有求解 First集 的 非终结符
+            // continue; // 跳过 没有求解 First集 的 非终结符
+            break;
           }
           // console.log('nonName', nonName, 'Xi', Xi);
-          // 如果是终结符 或者
+          // 如果是终结符 保存到First
           if (!isNon(sponserObject, Xi)) {
             // console.log('222');
             FRItem.splice(+charIndex)// 将后面的元素全部舍去
+            const FirstofNon = getFirst(sponserObject, nonName); // 获取  非终结符 nonName 的First
+            FirstofNon.add(Xi);
             break;
           }
           // 是一个非终结符
           else {
             const FirstofXi = getFirst(sponserObject, Xi); // 获取Xi的First 集
             const FirstofNon = getFirst(sponserObject, nonName); // 获取  非终结符 nonName 的First
-
             // 保存 Frist
             FirstofXi.forEach((item) => {
               if (item !== EMPTY) {
                 FirstofNon.add(item);
-                isModified = true; // First 发生改变
+
                 // console.log('save:', item);
               }
             });
+            isModified = true; // First 发生改变
             // console.log('FirstofNon', FirstofNon);
 
-            // 候选式内 空字 立即停止 ，
+            // 候选式内 不含空字 立即停止 ，
             if (!isCandidateHasEmpty(sponserObject, Xi)) {
-              sponser.firstRelation.splice(+index);//从FR item中 删除 整个列表
+              sponser.firstRelation.splice(+index, 1);//从FR item中 删除 之后的 ：不可推到 空字 后面的 相关无效
               break;
-            } else FRItem.splice(+charIndex, 1);//删除之后的 
+            } else FRItem.splice(+charIndex, 1);//删除当前的
             //如果当前是最后一个 非终结符
-            if (FRItem.length === 0 && FirstofXi.has(EMPTY)) {  //当前是一个 非终结符 但是  所有的项都 被遍历并移除 
+            if (FRItem.length === 0 && FirstofNon.size === 0 && FirstofXi.has(EMPTY)) {  //当前是一个 非终结符 但是  所有的项都 被遍历并移除 
               FirstofNon.add(EMPTY);//
             }
           }
 
         }
-
+        if (FRItem.length === 0)
+          sponser.firstRelation.splice(+index);//如果内容为空 本身也应该被删除
       }
     }
     // logSponserObj(sponserObject);
   } while (isModified); // 一直 循环 直到First 稳定
-  logSponserObj(sponserObject, 'FT');
+
   // 验证 每个非终结符的 First 集 非空以及 FirstRelation 集合 为空
   if (!checkState(sponserObject)) {
     console.log('文法错误 inFirst');
+    logSponserObj(sponserObject, 'FT');
     return false;
   }
 
@@ -208,6 +216,7 @@ export function generateFollow(sponserObject: SponserObject, start: string) {
   let isModified = false;
   // 一直 循环  直到 Follow 稳定
   do {
+
     isModified = false;
     for (const nonName in sponserObject) {
       const sponser = sponserObject[nonName];
@@ -231,25 +240,29 @@ export function generateFollow(sponserObject: SponserObject, start: string) {
           sponser.followRelation.splice(+index, 1); // 删除本元素
         }
         else {
-          if (sponserObject[FRNonName].followRelation.length !== 0) {//还没求解完
-            continue;
-          }
-          const FOLLOW = getFollow(sponserObject, FRNonName);
+          //必须解决 循环依赖的问题
+          const FOLLOW = getFollow(sponserObject, FRNonName);//先把已经求解出来的  保存
           FOLLOW.forEach((item) => {
             // 非空字符
-            if (item !== EMPTY) Follow.add(item); // 保存 到 nonName 的Follow 集
+            if (item !== EMPTY) {
+              Follow.add(item); // 保存 到 nonName 的Follow 集
+
+            }
           });
           isModified = true;//标记 变更
+          const filtered = sponserObject[FRNonName].followRelation.filter(item => item.type === 'FOLLOW' && item.nonName !== nonName);//过滤掉 First 类型的相关和 循环依赖 
           sponser.followRelation.splice(+index, 1); // 删除本元素
+          sponser.followRelation.push(...filtered);//添加到 
         }
       }
     }
   } while (isModified);
   if (!checkState(sponserObject, 'FOLLOW')) {
     console.log('文法错误 in Follow');
+    logSponserObj(sponserObject, 'FW');
     return false;
   }
-  // logSponserObj(sponserObject, 'FW');
+
   return true;
 }
 

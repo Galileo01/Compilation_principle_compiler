@@ -1,14 +1,37 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useReducer, useEffect } from 'react';
 import fs from 'fs';
 import path from 'path';
 import { remote } from 'electron';
 import { Button, Row, Col, Menu, Tabs } from 'antd';
 import { FileInfo, LAStateType } from '../../types/common';
+import { TokenItem } from '../../types/compiler';
 import CodeTab from '../../components/CodeTab';
 import LexicalAnalyseTab from '../LexicalAnalyseTab';
 import SyntaxAnalyseTab from '../SyntaxAnalyseTab';
 import './index.less';
 const { dialog } = remote;
+interface StateType {
+  tokenList: TokenItem[];
+}
+interface ActionType {
+  type: 'UPDATE_TOKENLIST';
+  payload: any;
+}
+const initialState: StateType | any = {
+  tokenList: [],
+};
+//reducer 纯函数
+function reducer(pre: StateType, action: ActionType): StateType {
+  console.log(action);
+
+  switch (action.type) {
+    case 'UPDATE_TOKENLIST':
+      return {
+        ...pre,
+        tokenList: action.payload,
+      };
+  }
+}
 
 export default function Index() {
   console.log('render');
@@ -19,10 +42,9 @@ export default function Index() {
     path: '',
     content: '',
   });
-  // 文件是否已经选择
-  const filechosen = useMemo(() => fileTab.name !== '', [fileTab]);
-  // 分析状态
-  const [analyseState, setState] = useState<LAStateType>('unload');
+
+  const [state, dispatch] = useReducer(reducer, initialState);
+
   // 添加 tab
   async function openFile() {
     try {
@@ -109,11 +131,10 @@ export default function Index() {
           <Col span={12} className="analyse">
             <Tabs type="card" size="small">
               <Tabs.TabPane tab="词法分析" key="lexical">
-                {/* 词法分析 tab*/}
-                <LexicalAnalyseTab fileinfo={fileTab} />
+                <LexicalAnalyseTab fileinfo={fileTab} dispatch={dispatch} />
               </Tabs.TabPane>
               <Tabs.TabPane tab="语法分析" key="syntax">
-                <SyntaxAnalyseTab />
+                <SyntaxAnalyseTab tokenList={state.tokenList} />
               </Tabs.TabPane>
               <Tabs.TabPane tab="语义分析" key="semantic">
                 语义

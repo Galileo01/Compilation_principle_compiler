@@ -1,0 +1,81 @@
+expression
+            : bool_exp 
+            | set_exp 
+            ;
+bool_exp
+              : T bool_exp'
+              ;
+T
+          : F T'
+          ;
+F
+              : arith_exp F'
+              | ! F
+              | true
+              | false
+              ;
+rela_oprator
+              : <
+              | >
+              | <=
+              | >=
+              | ==
+              | !=
+              ;
+F'
+              : rela_oprator arith_exp
+              | ε                
+              ;
+bool_exp'
+              : || T bool_exp'
+              | ε
+              ;                
+T'
+              : && F T'
+              | ε
+              ;
+arith_exp
+    : H arith_exp'
+    ;
+arith_exp'
+    : + H arith_exp'
+    | - H arith_exp'
+    | ε
+    ;
+set_exp
+        : id = bool_exp
+        ;
+H
+    : G H'
+    ;
+H'
+    : * G H'
+    | / G H'
+    | % G H'
+    | ε
+    ;
+G
+    : ( arith_exp )
+    | var_val
+    | num_const 
+    ;
+var_val
+            : id
+            | func_call
+            ;
+func_call 
+            : id ( actual_params_list ) 
+            ;
+actual_params_list 
+                    : actual_param
+                    | ε
+                    ;
+actual_param 
+              : bool_exp actual_param'
+              ;
+actual_param'
+            : ε
+            | , actual_param
+            ;
+
+                        

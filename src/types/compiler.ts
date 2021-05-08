@@ -37,6 +37,7 @@ export enum TypeCode {
   else,
   for,
   include,
+  main,//主函数
   //运算符
   '(' = 201,
   ')',

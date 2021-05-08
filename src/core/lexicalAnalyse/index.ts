@@ -23,7 +23,7 @@ const boundReg = /[{};,]/; //界符判断
 //判断 关键字或者 标识符的 种别码
 function getTypeCode(word: string) {
   //首先判断是不是关键字
-  for (let code = 101; code <= 113; code++) {
+  for (let code = 101; code <= 115; code++) {
     if (TypeCode[code] === word) return code;
   }
   //不是关键字就是 标识符

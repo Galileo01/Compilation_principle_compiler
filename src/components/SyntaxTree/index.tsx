@@ -1,23 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import mermaid from 'mermaid';
-import { generateGraphGrammer } from './utils';
 interface Props {
-  analyseSponser: string[];
-  T: string[]
+  graphContent: string; //画图语法的 内容
 }
 //语法树组件
-const SyntaxTree: React.FC<Props> = ({ analyseSponser, T }) => {
-  const graphContent = generateGraphGrammer(analyseSponser, T);
-  console.log(graphContent);
+const SyntaxTree: React.FC<Props> = ({ graphContent }) => {
+  console.log('render Tree');
 
+  const [html, setHtml] = useState('');
+  //绘制函数
+  function rerender() {
+    const element = document.querySelector('.mermaid') as Element;
+    const insertSvg = (svgCode: string) => {
+      element.innerHTML = svgCode;
+    };
+    const graph = mermaid.mermaidAPI.render('graphDiv', graphContent, insertSvg);
+    setHtml(graph);
+  }
   //更新刷新 树
   useEffect(() => {
-    mermaid.init('.mermaid');
+    rerender();
   }, [graphContent]);
 
   return (
     <div className="syntax-tree">
-      <div className="mermaid" dangerouslySetInnerHTML={{ __html: graphContent }}></div>
+      <div className="mermaid" dangerouslySetInnerHTML={{ __html: html }}></div>
     </div>
   );
 };
