@@ -17,8 +17,8 @@ export interface CompilerError {
 export interface TokenItem {
   typeCode: number;
   word: string;
-  row?: number | '未知';
-  col?: number | '未知';
+  row: number;
+  col: number;
 }
 
 //声明 关键字
@@ -130,3 +130,20 @@ export class Sponser {
 export interface SponserObject {
   [nonName: string]: Sponser;
 }
+//语法树的 节点
+export interface SyntaxTreeNode {
+  name: string,
+  id: string,//节点的唯一标识
+  children: SyntaxTreeNode[]
+}
+export const EMPTY = 'ε';
+//语义分析 用到的类型
+//终结符 位置 信息
+export interface TerminalPosition {
+  row: number,
+  col: number,
+
+  terminalId: number,//终结符 唯一标示 = 在语法分析 的 匹配顺序 =语义分析的 遍历顺序 
+}
+//语义 分析 
+export { SymbolTable, ExtendTreeNode, SymbolTableUtil } from '../core/semanticAnalyse'

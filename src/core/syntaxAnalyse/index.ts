@@ -1,6 +1,6 @@
 import { readGrammar, generateFollow, generateFirst, logSponserObj, getNonT_T, getFirst, getFollow } from './initUtils';
 import { EMPTY } from './constant'
-import { SponserObject, TokenItem, TypeCode } from '../../types/compiler'
+import { SponserObject, TokenItem, TypeCode, SyntaxTreeNode, TerminalPosition } from '../../types/compiler'
 interface DissatisfyItem {
   nonName: string,//非终结符 名称
   reason: string,//不满足的原因
@@ -153,194 +153,31 @@ type SyntaxError = {
 export interface PredictAnalyseResult {
   success: true | false,
   sponserOrder: string[],
-  errList: SyntaxError[]
+  errList: SyntaxError[],
+  terminalPositionList: TerminalPosition[]
 }
-
+//文法信息
 interface GrammerInfo {
   start: string,
   predictable: string[][][],
   NonT: string[],
   T: string[]
 }
+
+
 //每一个分支的状态
 interface ForkState {
   stack: string[],//产生 分支时   匹配栈的 数据  （全拷贝）
   indexInStr: number,//当前匹配到的 串内下标
   orderLength: number//当前 sponsorOrder 的长度   在 回溯 的时候 删除 分叉之后的 数据
   sponsorPosition: [number, number, number] //分支选择的 产生式子 在预测分析表的位置 [row,col,index]
-}
-/*预测分析法
-可以 处理 非 LL1文法   加入 回溯来解决 多分支问题
-*/
-export function predictAnalyse(str: string[], grammerinfo: GrammerInfo) {
-  console.log(str);
-  const { start, predictable, NonT, T, } = grammerinfo;
-  const result: PredictAnalyseResult = {
-    success: true,
-    sponserOrder: [],
-    errList: []
-  }
-
-  let index = 0;
-  let current = str[index];//当前 所处的符号串下标
-  let stack: string[] = ['#', start];//初始化 zhan
-  let Top = stack.pop() as string;//匹配栈 栈顶 元素
-  const forkStack: ForkState[] = [];//保存 分叉状态的的队列 MARK:
-  while (Top !== '#' || current !== '#') {//当Top 和current  其中有一个 不为 井 号
-    // console.log(`stack:${stack},Top:${Top},current:${current}`);
-
-    if (Top === current)//匹配成功
-    {
-      console.log(current, '匹配');
-      current = str[++index];
-      Top = stack.pop() as string;//栈顶 元素
-    }
-    else if (T.includes(Top)) {// 栈顶的 终结符和 当前出入串字符不匹配  尝试回溯
-      console.log(`非法的 终结符/输入符号：${current},尝试回溯`);
-
-      let msg = '';
-      if (forkStack.length > 0) {
-        const preFork = forkStack[forkStack.length - 1];//上一个 状态
-        const { stack: preStack, indexInStr: preIndexInStr, orderLength: preLength, sponsorPosition } = preFork;
-        //恢复状态
-        stack = [...preStack];
-        index = preIndexInStr;
-        current = str[index];
-        result.sponserOrder.splice(preLength);//删除 产生分支之后的 数据
-        const [preRow, preCol, preIndex] = sponsorPosition;
-
-        if (preIndex + 1 === predictable[preRow][preCol].length) {//没有更多的 产生式子 可供选择 ,无法继续 回溯
-          msg = '没有更多的 产生式子 可供选择 ,无法继续 回溯';
-          result.errList.push({
-            word: current
-            , msg
-          });
-          current = str[++index];//输入串 当前字符向后移
-          console.log(msg);
-
-        }
-        else {
-          msg = `非法的 终结符/输入符号，无法继续推导,回溯成功`;
-          const nextSonsor = predictable[preRow][preCol][preIndex + 1];
-          sponsorPosition[2]++;
-          const [left, right] = nextSonsor.split('->');
-          (right !== EMPTY) && (right.split(' ').reverse().forEach(char => stack.push(char)));//在预测表里有值 则逆序压栈(保证非空字)
-          result.sponserOrder.push(nextSonsor);// MARK:
-          console.log(msg, `nextSponsor:${nextSonsor}`);
-        }
-        Top = stack.pop() as string;//弹出栈顶 终结符
-      }
-      //无法回溯  错误处理
-      else {
-        msg = `非法的 终结符/输入符号,分析栈顶：${Top},输入串当前符号：${current}`;
-        // return result;
-        console.log(msg);
-        result.errList.push({
-          word: current,
-          msg
-        })
-        Top = stack.pop() as string;//弹出栈顶 终结符
-      }
-
-    }
-    //栈顶是 非终结符
-    else if (NonT.includes(Top)) {
-      const row = NonT.findIndex(item => item === Top);
-      const col = T.findIndex(item => item === current);
-      // console.log(row, col);
-      //获取 预测分析表的对应值 
-      const value = predictable[row][col];
-
-      if (value && value.length > 0) {
-        const sponsor = value[0]
-        // console.log(`${value}`);
-        console.log('匹配产生式子', value[0]);
-
-        const [left, right] = sponsor.split('->');
-        //还有 其他可选的 产生式子
-        if (value.length > 1) {
-          //保存 状态 之后
-          forkStack.push({
-            stack: [...stack],//栈要在 更新之前 进行保存
-            indexInStr: index,
-            orderLength: result.sponserOrder.length,
-            sponsorPosition: [row, col, 0]
-          })
-          console.log('产生一个分支');
-
-        }
-        (right !== EMPTY) && (right.split(' ').reverse().forEach(char => stack.push(char)));//在预测表里有值 则逆序压栈(保证非空字)
-        result.sponserOrder.push(sponsor)
-      }
-      else {//预测分析表 对应 位置没有  进行 回溯 回溯到 上一个分支状态  或者 进行错误处理
-
-        // return result;
-        // const msg = `predictable[${Top}][${current}]为空，无法继续推导,分析栈顶：${Top},输入串当前符号：${current}`;
-        let msg = '';
-        // 可以 回溯
-        if (forkStack.length > 0) {
-          const preFork = forkStack[forkStack.length - 1];//上一个 状态
-          const { stack: preStack, indexInStr: preIndexInStr, orderLength: preLength, sponsorPosition } = preFork;
-          //恢复状态
-          stack = [...preStack];
-          index = preIndexInStr;
-          current = str[index];
-          result.sponserOrder.splice(preLength);//删除 产生分支之后的 数据
-          const [preRow, preCol, preIndex] = sponsorPosition;
-
-          if (preIndex + 1 === predictable[preRow][preCol].length) {//没有更多的 产生式子 可供选择 ,无法继续 回溯
-            msg = `没有更多的 产生式子 可供选择 ,无法继续 回溯,Top:${Top},current:${current}`;
-            result.errList.push({
-              word: current
-              , msg
-            });
-            current = str[++index];//输入串 当前字符向后移
-            console.log(msg);
-            // break;
-          }
-          else {
-            msg = `predictable[${Top}][${current}]为空，无法继续推导,回溯成功`;
-            console.log(msg);
-
-            const nextSonsor = predictable[preRow][preCol][preIndex + 1];
-            sponsorPosition[2]++;
-            const [left, right] = nextSonsor.split('->');
-            (right !== EMPTY) && (right.split(' ').reverse().forEach(char => stack.push(char)));//在预测表里有值 则逆序压栈(保证非空字)
-            result.sponserOrder.push(nextSonsor);// MARK:
-          }
-        }
-        //无法回溯
-        else {
-          console.log('无法回溯');
-          msg = `predictable[${Top}][${current}]为空，无法继续推导,分析栈顶：${Top},输入串当前符号：${current}`;
-          result.errList.push({
-            word: current
-            , msg
-          });
-          current = str[++index];//输入串 当前字符向后移
-          // break;
-          continue;
-        }
-
-      }
-      Top = stack.pop() as string;//栈顶 元素
-    }
-    if (result.errList.length >= 20) {//错误数量超过 20 立即停止，此时的 结果已经么有意义
-      result.errList.push({
-        word: current
-        , msg: '错误超过20 个 ，强制'
-      });
-      break;
-    }
-  }
-  result.success = result.errList.length === 0;//根据错误个数来判断  
-  return result;
+  terminalPositionList: TerminalPosition[]
 }
 
 /*
- 处理产生式 为 语义分析作准备
- 1. 处理 包含id 的产生式
- 2.处理 包含 num_const 的产生式
+处理产生式 为 语义分析作准备
+1. 处理 包含id 的产生式
+2.处理 包含 num_const 的产生式
 */
 function dealSponsor(srcSponsor: string, current: string, type: 'ID' | 'NUM_CONST'): string {
   const params = {
@@ -388,31 +225,36 @@ function updateNearestSponsor(sponsorOrder: string[], current: string) {
   for (let i = sponsorOrder.length - 1; i >= 0; i--) {
     const sponsor = sponsorOrder[i];
     const indexOfID = sponsor.indexOf('id');
+    const indexofVoid = sponsor.indexOf('void');//排除 查找到 void 里的 id
     const indexOfNUM_CONST = sponsor.indexOf('num_const');
+
     //包含 id
-    if (indexOfID > -1) {
+    if (indexofVoid < 0 && indexOfID > -1) {
       const before = sponsor.slice(0, indexOfID + 2);//获取之前的部分
       const after = sponsor.slice(indexOfID + 2);//之后的部分
       sponsorOrder[i] = before + ':' + current + after;
-      console.log('最新,', sponsorOrder[i]);
-
+      console.log('最新1,', sponsorOrder[i]);
       break;
     }
     else if (indexOfNUM_CONST > -1) {
       const before = sponsor.slice(0, indexOfNUM_CONST + 9);//获取之前的部分
       const after = sponsor.slice(indexOfNUM_CONST + 9);//之后的部分
       sponsorOrder[i] = before + ':' + current + after;
-      console.log('最新,', sponsorOrder[i]);
+      console.log('最新2,', sponsorOrder[i]);
       break
     }
   }
 }
+/*预测分析法
+可以 处理 非 LL1文法   加入 回溯来解决 多分支问题
+*/
 //测试  接受 token 串 为输入，
-export function predictAnalyse_V2(srcTokenList: TokenItem[], grammerinfo: GrammerInfo) {
+export function predictAnalyse(srcTokenList: TokenItem[], grammerinfo: GrammerInfo) {
   const result: PredictAnalyseResult = {
     success: true,
     sponserOrder: [],
-    errList: []
+    errList: [],
+    terminalPositionList: []//存储 终结符的 位置信息
   }
   //预处理 token 
   let tokenList: TokenItem[] = [];
@@ -432,7 +274,7 @@ export function predictAnalyse_V2(srcTokenList: TokenItem[], grammerinfo: Gramme
   let current = tokenList[index].word;//当前 所处的符号串下标
   let stack: string[] = ['#', start];//初始化 匹配栈
   let Top = stack.pop() as string;//匹配栈 栈顶 元素
-  const forkStack: ForkState[] = [];//保存 分叉状态的的队列 MARK:
+  const forkStack: ForkState[] = [];//保存 分叉状态的的队列            MARK:
   while (Top !== '#' || current !== '#') {//当Top 和current  其中有一个 不为 井 号
     // console.log(`stack:${stack},Top:${Top},current:${current}`);
     if (Top === transformCurrent(tokenList[index]))//匹配成功
@@ -442,6 +284,13 @@ export function predictAnalyse_V2(srcTokenList: TokenItem[], grammerinfo: Gramme
       {
         updateNearestSponsor(result.sponserOrder, current);
       }
+      const { row, col } = tokenList[index];
+      //记录位置信息
+      result.terminalPositionList.push({
+        row: row,
+        col: col,
+        terminalId: result.terminalPositionList.length
+      })
       current = tokenList[++index].word;
       Top = stack.pop() as string;//栈顶 元素
 
@@ -452,16 +301,17 @@ export function predictAnalyse_V2(srcTokenList: TokenItem[], grammerinfo: Gramme
       let msg = '';
       if (forkStack.length > 0) {
         const preFork = forkStack[forkStack.length - 1];//上一个 状态
-        const { stack: preStack, indexInStr: preIndexInStr, orderLength: preLength, sponsorPosition } = preFork;
+        const { stack: preStack, indexInStr: preIndexInStr, orderLength: preLength, sponsorPosition, terminalPositionList: prePositionList } = preFork;
         //恢复状态
         stack = [...preStack];
         index = preIndexInStr;
+        result.terminalPositionList = [...prePositionList];
         current = tokenList[index].word;
         result.sponserOrder.splice(preLength);//删除 产生分支之后的 数据
         const [preRow, preCol, preIndex] = sponsorPosition;
 
         if (preIndex + 1 === predictable[preRow][preCol].length) {//没有更多的 产生式子 可供选择 ,无法继续 回溯
-          msg = '非法的 终结符/输入符号,没有更多的 产生式子 可供选择 ,无法继续 回溯';
+          msg = `${tokenList[index].row}行${tokenList[index].col}列` + '非法的 终结符/输入符号,没有更多的 产生式子 可供选择 ,无法继续 回溯';
           result.errList.push({
             word: current
             , msg
@@ -515,7 +365,8 @@ export function predictAnalyse_V2(srcTokenList: TokenItem[], grammerinfo: Gramme
             stack: [...stack],//栈要在 更新之前 进行保存
             indexInStr: index,
             orderLength: result.sponserOrder.length,
-            sponsorPosition: [row, col, 0]
+            sponsorPosition: [row, col, 0],
+            terminalPositionList: [...result.terminalPositionList]
           })
           console.log('产生一个分支');
 
@@ -531,14 +382,14 @@ export function predictAnalyse_V2(srcTokenList: TokenItem[], grammerinfo: Gramme
         // 可以 回溯
         if (forkStack.length > 0) {
           const preFork = forkStack[forkStack.length - 1];//上一个 状态
-          const { stack: preStack, indexInStr: preIndexInStr, orderLength: preLength, sponsorPosition } = preFork;
+          const { stack: preStack, indexInStr: preIndexInStr, orderLength: preLength, sponsorPosition, terminalPositionList: prePositionList } = preFork;
           //恢复状态
           stack = [...preStack];
           index = preIndexInStr;
           current = tokenList[index].word;
+          result.terminalPositionList = [...prePositionList];
           result.sponserOrder.splice(preLength);//删除 产生分支之后的 数据
           const [preRow, preCol, preIndex] = sponsorPosition;
-
           if (preIndex + 1 === predictable[preRow][preCol].length) {//没有更多的 产生式子 可供选择 ,无法继续 回溯
             msg = `没有更多的 产生式子 可供选择 ,无法继续 回溯,Top:${Top},current:${current}`;
             result.errList.push({
@@ -587,18 +438,6 @@ export function predictAnalyse_V2(srcTokenList: TokenItem[], grammerinfo: Gramme
   result.success = result.errList.length === 0;//根据错误个数来判断  
   return result;
 }
-//生成 mermaid 语法 用到的 节点描述类型
-interface MermaidNode {
-  id: string,//id 唯一 标识
-  name: string,// 名称
-  isToEmpty: boolean
-}
-//语法树的 节点
-interface SyntaxTreeNode {
-  name: string,
-  id: string,//节点的唯一标识
-  children: SyntaxTreeNode[]
-}
 
 //在 当前 syntaxTree 语法树 上 查找 最近的 名称为name 的节点
 function getClosestNodeInSyntaxTree(root: SyntaxTreeNode, name: string) {
@@ -628,16 +467,18 @@ export function generateSyntaxTreeAndMermaid_(start: string, sponserOrder: strin
     children: []
   };//根 节点
   let num = 1;
+  let terminalIndex = 0;// 终结符 节点下标
   sponserOrder.forEach((item => {
     const [left, right] = item.split('->');
     const nodes = right.split(' ');//
     const closetedNode = getClosestNodeInSyntaxTree(root, left);
     nodes.forEach((name) => {
+      const isTerminal = T.includes(name) || name.includes('id:') || name.includes('num_const:');
       //计算 mermaid 语法
-      const shape = T.includes(name) || name.includes('id:') || name.includes('num_const:') ? `{"${name}"}` : `(("${name}"))`;//终结符使用菱形 非终结符用圆形
+      const shape = isTerminal ? `{"${name}"}` : `(("${name}"))`;//终结符使用菱形 非终结符用圆形
       graphContent += `${closetedNode.id}((${left}))---n${num}${shape}\n`;
       // console.log(left, name);
-      const newNode = {
+      const newNode: SyntaxTreeNode = {
         id: 'n' + num++,
         name: name,
         children: []
@@ -662,7 +503,9 @@ function dealTokenList(src: TokenItem[]): DealResult {
   //复制一份 并追加
   const tokenList = src.map(item => ({ ...item })).concat([{
     word: '#',
-    typeCode: 305
+    typeCode: 305,
+    row: 0,
+    col: 0
   }]);
   const index = tokenList.findIndex((item) => item.word === 'main');
   if (index < 0) {
@@ -701,24 +544,11 @@ const grammerPathObj = {
   if: 'grammer_if_2.txt',//包含 函数调用
   program: 'program_grammer.txt'
 }
-type GrammperName = 'expression' | 'if' | 'program';
+type GrammperName = 'expression' | 'if' | 'program' | 'if_';
 //定义 语法 分析的入口函数
-export function syntaxAnalyse(inputString: string, grammerName: GrammperName = 'program') {
 
-  //初始化 得到预测分析表
-  const { start, predictable, NonT, T, sponserObject } = predictInit(grammerPathObj[grammerName]);
-  const dissatisfyList = LL1Check(sponserObject, NonT);
-  if (dissatisfyList.length > 0) {
-    console.log('文法，不满足 LL1:', dissatisfyList);
-    // return;
-  }
-  const result = predictAnalyse(inputString.split(' '), { start, predictable, NonT, T });
-  const { syntaxTree, graphContent } = generateSyntaxTreeAndMermaid_(start, result.sponserOrder, T);
-  // console.log(syntaxTree);
-  return { ...result, syntaxTree, graphContent };
-}
 // 接受 token串为参数
-export function syntaxAnalyse_V2(tokenList: TokenItem[], grammerName: GrammperName = 'program') {
+export function syntaxAnalyse(tokenList: TokenItem[], grammerName: GrammperName = 'program') {
 
   // 初始化 得到预测分析表
   const { start, predictable, NonT, T, sponserObject } = predictInit(grammerPathObj[grammerName]);
@@ -727,10 +557,20 @@ export function syntaxAnalyse_V2(tokenList: TokenItem[], grammerName: GrammperNa
     console.log('文法，不满足 LL1:', dissatisfyList);
     // return;
   }
-  const result = predictAnalyse_V2(tokenList, { start, predictable, NonT, T });
-  const { syntaxTree, graphContent } = generateSyntaxTreeAndMermaid_(start, result.sponserOrder, T);
+  const result = predictAnalyse(tokenList, { start, predictable, NonT, T });
+  console.log(111, result.terminalPositionList);
+
+  const { syntaxTree, graphContent } = generateSyntaxTreeAndMermaid_(start, result.sponserOrder, T,);
   // console.log(syntaxTree);
   return { ...result, syntaxTree, graphContent };
 }
-export type SyntaxAnaluseResult = ReturnType<typeof syntaxAnalyse_V2>;
+export type SyntaxAnaluseResult = ReturnType<typeof syntaxAnalyse>;
 export default syntaxAnalyse;
+// const result = syntaxAnalyse('i + ( i * i ) #');
+// const result = syntaxAnalyse('*i*+i#');
+// const result = syntaxAnalyse('id + ( id * id ) #', 'grammer6_back.txt');
+// const result = syntaxAnalyse('id >= id ', 'rela_grammer.txt');
+// const result = syntaxAnalyse('id || id >= num_const #', grammerPathObj.bool_final);
+// const result = syntaxAnalyse('id ( id , num_const ) #', grammerPathObj.bool_final);
+// const result = syntaxAnalyse('id || id * ( num_const - id / num_const ) >= num_const #', grammerPathObj.expression);
+// const result = syntaxAnalyse('a b a #', grammerPathObj.test);

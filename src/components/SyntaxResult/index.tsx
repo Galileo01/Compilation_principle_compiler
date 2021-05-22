@@ -18,13 +18,19 @@ const columns = [
   },
 ];
 const SyntaxResult: React.FC<props> = ({ syntaxResult }) => {
-  console.log('render in token-table');
+  console.log('render in syntaxResult token-table');
 
-  const maxHeight = useGetMaxHeight('.analyse-result', 100);
+  const maxHeight = useGetMaxHeight('.analyse-result', 140);
   return (
     <section className="analyse-result">
       {syntaxResult.success === true ? (
         <section className="token_list">
+          <h4
+            style={{
+              textAlign: 'center',
+            }}>
+            产生式列表
+          </h4>
           <Table
             dataSource={syntaxResult.sponserOrder.map((item, index) => ({
               index,

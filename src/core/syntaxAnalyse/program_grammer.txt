@@ -1,5 +1,6 @@
          program
                   : func_block main() complicated_statement
+                  | main() complicated_statement
                   ;
        func_type
                   : int
@@ -21,7 +22,8 @@ func_params_list
                   : common_type id func_params'
                   ;
       func_block
-                  : func_define func_block
+                  : statement_table func_define func_block
+                  | func_define func_block
                   | ε
                   ;
     func_params'
@@ -29,7 +31,7 @@ func_params_list
                   | , func_params
                   ;
          if_statement
-                       : if ( bool_exp ) { statement } if_statement' 
+                       : if ( bool_exp ) complicated_statement if_statement' 
                        ;
             statement 
                        : declare_statement
@@ -52,7 +54,10 @@ func_params_list
                        | float
                        ;
    const_declare_list
-                       : id = const_val const_declare_list'
+                       : s_id_declare const_declare_list'
+                       ;
+    const_val
+                       : num_const
                        ;
           var_declare
                        : int var_declare_list
@@ -60,10 +65,10 @@ func_params_list
                        | float var_declare_list
                        ;
      var_declare_list
-                       : s_var_declare var_declare_list'
+                       : s_id_declare var_declare_list'
                        ;
-        s_var_declare
-                       : var_val s_var_declare'
+        s_id_declare
+                       : var_val s_id_declare'
                        ;
     execute_statement
                        : set_statement
@@ -88,15 +93,14 @@ complicated_statement
                        : { statement_table }
                        ;
       statement_table
-                       : const common_type const_declare_list statement_table'
-                       | int var_declare_list statement_table'
-                       | char var_declare_list statement_table'
-                       | float var_declare_list statement_table'
+                       : const_declare statement_table
+                       | var_declare statement_table
+                       | set_exp ; statement_table
+                       | if_statement statement_table
+                       | return_statement 
+                       | func_call ; statement_table
+                       | complicated_statement statement_table
                        | ε
-                       | set_exp statement_table'
-                       | if_statement statement_table'
-                       | { statement_table } statement_table'
-                       | return return_statement' ; statement_table'
                        ;
   const_declare_list'
                        : ;
@@ -106,31 +110,20 @@ complicated_statement
                        : ;
                        | , var_declare_list
                        ;
-       s_var_declare'
+       s_id_declare'
                        : ε
                        | = bool_exp
                        ;
-
-     statement_table'
-                       : ε
-                       | const common_type const_declare_list statement_table'
-                       | int var_declare_list statement_table'
-                       | char var_declare_list statement_table'
-                       | float var_declare_list statement_table'
-                       | set_exp statement_table'
-                       | if ( bool_exp ) { statement } if_statement' statement_table'
-                       | { statement_table } statement_table'
-                       | return return_statement' ; statement_table'
-                       ;
         if_statement'
                        : ε
-                       | else { statement }
+                       | else complicated_statement
                        ;
 set_exp
             : id = bool_exp
             ;
 bool_exp
-              : T bool_exp'
+              : T 
+              | - G
               ;
 T
           : F T'
@@ -152,13 +145,10 @@ rela_oprator
 F'
               : rela_oprator arith_exp
               | ε                
-              ;
-bool_exp'
-              : || T bool_exp'
-              | ε
-              ;                
+              ;              
 T'
               : && F T'
+              | || F T'
               | ε
               ;
 arith_exp
@@ -167,6 +157,7 @@ arith_exp
 arith_exp'
     : + H arith_exp'
     | - H arith_exp'
+    | rela_oprator H arith_exp'
     | ε
     ;
 H

@@ -29,7 +29,7 @@ const LexicalAnalyseTab: React.FC<Props> = ({ fileinfo, dispatch }) => {
         message: '分析成功',
       });
       dispatch({
-        type: 'UPDATE_TOKENLIST',
+        type: 'TOKENLIST',
         payload: result.data,
       });
       // setState('success');
@@ -88,7 +88,7 @@ const LexicalAnalyseTab: React.FC<Props> = ({ fileinfo, dispatch }) => {
   function resetResult() {
     setResult(null);
     dispatch({
-      type: 'UPDATE_TOKENLIST',
+      type: 'TOKENLIST',
       payload: [],
     });
   }

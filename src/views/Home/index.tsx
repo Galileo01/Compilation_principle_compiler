@@ -4,31 +4,53 @@ import path from 'path';
 import { remote } from 'electron';
 import { Button, Row, Col, Menu, Tabs } from 'antd';
 import { FileInfo, LAStateType } from '../../types/common';
-import { TokenItem } from '../../types/compiler';
+import { TokenItem, SyntaxTreeNode, TerminalPosition, SymbolTableUtil } from '../../types/compiler';
 import CodeTab from '../../components/CodeTab';
 import LexicalAnalyseTab from '../LexicalAnalyseTab';
 import SyntaxAnalyseTab from '../SyntaxAnalyseTab';
+import SemanticAnalyseTab from '../SemanticAnalyseTab';
+import TranslateTransitionalTab from '../TranslateTransitionalTab';
 import './index.less';
 const { dialog } = remote;
 interface StateType {
-  tokenList: TokenItem[];
+  tokenList: TokenItem[]; //词法分析 token串
+  syntaxTree: SyntaxTreeNode | null; //语法分析 结构 语法树
+  terminalPositionList: TerminalPosition[]; //语法分析 终结符 位置信息
+  symbolTableUtil: SymbolTableUtil | null;
 }
 interface ActionType {
-  type: 'UPDATE_TOKENLIST';
+  type: 'TOKENLIST' | 'SYNTAXTREE' | 'SYMBOLTABLEUTIL' | 'POSITIONLIST';
   payload: any;
 }
 const initialState: StateType | any = {
   tokenList: [],
+  syntaxTree: null,
+  terminalPositionList: [],
+  symbolTableUtil: null,
 };
 //reducer 纯函数
 function reducer(pre: StateType, action: ActionType): StateType {
   console.log(action);
-
   switch (action.type) {
-    case 'UPDATE_TOKENLIST':
+    case 'TOKENLIST':
       return {
         ...pre,
         tokenList: action.payload,
+      };
+    case 'SYNTAXTREE':
+      return {
+        ...pre,
+        syntaxTree: action.payload,
+      };
+    case 'POSITIONLIST':
+      return {
+        ...pre,
+        terminalPositionList: action.payload,
+      };
+    case 'SYMBOLTABLEUTIL':
+      return {
+        ...pre,
+        symbolTableUtil: action.payload,
       };
   }
 }
@@ -134,10 +156,21 @@ export default function Index() {
                 <LexicalAnalyseTab fileinfo={fileTab} dispatch={dispatch} />
               </Tabs.TabPane>
               <Tabs.TabPane tab="语法分析" key="syntax">
-                <SyntaxAnalyseTab tokenList={state.tokenList} />
+                <SyntaxAnalyseTab tokenList={state.tokenList} dispatch={dispatch} />
               </Tabs.TabPane>
               <Tabs.TabPane tab="语义分析" key="semantic">
-                语义
+                <SemanticAnalyseTab
+                  syntaxTree={state.syntaxTree}
+                  terminalPositionList={state.terminalPositionList}
+                  dispatch={dispatch}
+                />
+              </Tabs.TabPane>
+              <Tabs.TabPane tab="中间/目标代码" key="transitional">
+                <TranslateTransitionalTab
+                  dispatch={dispatch}
+                  syntaxTree={state.syntaxTree}
+                  symbolTableUtil={state.symbolTableUtil}
+                />
               </Tabs.TabPane>
             </Tabs>
           </Col>

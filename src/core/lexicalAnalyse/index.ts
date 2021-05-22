@@ -208,7 +208,8 @@ function regOperator(code: string, start: number): RegResult {
   };
   let index = start;
   let state = 0;
-  const mulReg = /[\<\>\=\!\-\+\*\/]/; //可能有两个字符的 操作符前缀
+  const mulReg = /[\<\>\=\!\-\+\*\/\|\&]/; //可能有两个字符的 操作符前缀
+  let isMul = false;
   while (state !== 3 && state !== 5) {
     const char = code[index];
     switch (state) {
@@ -218,8 +219,8 @@ function regOperator(code: string, start: number): RegResult {
         } else state = 4;
         break;
       case 1:
-        if (char === '=') state = 2;
         //匹配到两个 字符的 运算符>= <= != ==
+        if (char === '=' || char === '|' || char === '&') state = 2;
         else {
           info.word = code.slice(start, index);
           info.typeCode = TypeCode[info.word];

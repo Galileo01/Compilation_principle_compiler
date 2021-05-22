@@ -29,13 +29,14 @@ const columns = [
   },
 ];
 const LexicalResult: React.FC<props> = ({ lexicalResult }) => {
-  console.log('render in token-table');
+  console.log('render in  lexicalResult token-table');
 
-  const maxHeight = useGetMaxHeight('.analyse-result', 100);
+  const maxHeight = useGetMaxHeight('.analyse-result', 140);
   return (
     <section className="analyse-result">
       {lexicalResult.success === true ? (
         <section className="token_list">
+          <h4>Token 串</h4>
           <Table
             dataSource={lexicalResult.data.map((item, index) => ({
               ...item,

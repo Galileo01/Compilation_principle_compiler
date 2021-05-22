@@ -1,13 +1,14 @@
 import React, { memo, useState } from 'react';
 import { Button, Modal, notification, Popover, Row, Col, Empty } from 'antd';
 import { TokenItem } from '../../types/compiler';
-import { syntaxAnalyse_V2, SyntaxAnaluseResult } from '../../core/syntaxAnalyse';
+import { syntaxAnalyse, SyntaxAnaluseResult } from '../../core/syntaxAnalyse';
 import SyntaxTree from '../../components/SyntaxTree';
 import SyntaxResult from '../../components/SyntaxResult';
 interface Props {
   tokenList: TokenItem[];
+  dispatch: Function;
 }
-const SyntaxAnalyseTab: React.FC<Props> = ({ tokenList }) => {
+const SyntaxAnalyseTab: React.FC<Props> = ({ tokenList, dispatch }) => {
   const [analyseResult, setResult] = useState<SyntaxAnaluseResult | null>(null);
   const [treeVisible, setVisible] = useState(false);
   console.log('render stntacAnalyseTab');
@@ -15,12 +16,22 @@ const SyntaxAnalyseTab: React.FC<Props> = ({ tokenList }) => {
   function entrance() {
     console.log(tokenList);
 
-    const result = syntaxAnalyse_V2(tokenList); //测试
-    // console.log(result);
+    const result = syntaxAnalyse(tokenList); //测试
+    console.log(result.syntaxTree);
     setResult(result);
-    if (result) {
+    if (result && result.success) {
       notification.success({
         message: '分析成功',
+      });
+      //保存语法树
+      dispatch({
+        type: 'SYNTAXTREE',
+        payload: result.syntaxTree,
+      });
+      //保存 终结符信息
+      dispatch({
+        type: 'POSITIONLIST',
+        payload: result.terminalPositionList,
       });
     } else {
       notification.error({
@@ -46,7 +57,7 @@ const SyntaxAnalyseTab: React.FC<Props> = ({ tokenList }) => {
           )}
         </Col>
         <Col span={4} offset={1}>
-          <Button onClick={() => setVisible(true)} disabled={!analyseResult}>
+          <Button onClick={() => setVisible(true)} disabled={!analyseResult || !analyseResult.success}>
             查看语法树
           </Button>
         </Col>
