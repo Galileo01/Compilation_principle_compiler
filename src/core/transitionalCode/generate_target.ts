@@ -4,6 +4,7 @@ type ASMCodeItem = string;
 
 interface ASMCodeTableItem {
   number: number, //四元式 编号  用于标示每个 汇编代码块
+  funName?: string,//对于函数定义语句 块 要包含 函数  在目标代嘛中 标示
   codeList: ASMCodeItem[] //本块 内的 汇编代码 数组
 }
 type ASMCodeTable = ASMCodeTableItem[];
@@ -393,6 +394,42 @@ const generateReturn: GenerateFunction = ({ value, scope }, symbolTableUtil) => 
   return codeList;
 }
 
+//程序 退出
+const generateSysQuit: GenerateFunction = () => {
+  return [
+    'quit: mov ah,4ch',
+    'INT 21H',
+    'code ends',
+    'end start'
+  ]
+}
+const startCodes = `
+assume cs:code,ds:data,ss:stack,es:extended   
+extended segment 
+db 1024 dup (0)   
+extended ends   
+stack segment   
+db 1024 dup (0)   
+stack ends   
+data segment   
+t_buff_p db 256 dup (24h)   
+t_buff_s db 256 dup (0)    
+data ends    
+code segment   
+start: mov ax,extended:   
+mov es,ax   
+mov ax,stack    
+mov ss,ax   
+mov sp,1024   
+mov bp,sp    
+mov ax,data   
+mov ds,ax   
+  
+  
+
+`
+
+
 function logCodeTable(asmCodeTable: ASMCodeTable) {
   asmCodeTable.forEach(({ number, codeList }) => {
     codeList.forEach((item, index) => {
@@ -400,18 +437,63 @@ function logCodeTable(asmCodeTable: ASMCodeTable) {
     })
   })
 }
-// 目标代码 生成  接收 四元式 表   符号表
-export function generateTargetCode(formulaTable: FourItemFormulaTable, symbolTableUtil: SymbolTableUtil) {
-  const asmCodeTable: ASMCodeTable = []
+
+//生成 字符串 形式的 最终代码 
+export function generateFinalCode(asmCodeTable: ASMCodeTable, funCodeTable: FUNASMCodeTable) {
+  let codeStr = startCodes;
+  const codes: string[] = [];
+  asmCodeTable.forEach(({ number, codeList, funName }) => {
+    codeList.forEach((item, index) => {
+      //第一条 代码 输出块 编号
+      const line = `${index === 0 ? number + ':' : '   '}   ${item}\n`;
+      codeStr += line;
+      codes.push(line);
+    })
+    codeStr += '\n';
+  })
+  codeStr += `\n\n
+      `
+  codes.push('\n', '\n');
+  //函数定义语句
+  for (const funName in funCodeTable) {
+    const codeList = funCodeTable[funName];
+    codeList.forEach((item, index) => {
+      //第一条 代码 输出块 编号
+      const line = `${index === 0 ? funName + ':' : '    '}   ${item}\n`;
+      codeStr += line;
+      codes.push(line);
+    })
+  }
+
+  return { codeStr, codes };
+}
+
+
+interface FUNASMCodeTable {
+  [key: string]: ASMCodeItem[];
+}
+// 主要的 目标代码 生成      接收 四元式 表   符号表
+export function generateMainCode(formulaTable: FourItemFormulaTable, symbolTableUtil: SymbolTableUtil) {
+  const asmCodeTable: ASMCodeTable = []; //普通 汇编代码 表
+  const funCodeTable: FUNASMCodeTable = {};//函数定义 以及函数体 汇编代码表
+  let isInFunDefine = false;//当前是否处于 函数 定义  
+  let funName = '';//正在 处理 函数定义的 函数明
   //依次 遍历 根据 四元式 生成 汇编
   formulaTable.forEach((item, index) => {
     const { scope, value } = item;
     const [op, A, B, T] = value;
     let codeList: ASMCodeItem[] = []
     // 控制 语句
-    //函数定义  
-    if (op && !A && !B && !T) {
-      codeList = ['PUSH BP', 'MOV BP,SP', 'SUB SP']
+    //函数定义
+    if (op === 'sys') {
+      codeList = generateSysQuit(item, symbolTableUtil);
+      console.log('转换 SYS', codeList);
+    }
+    else if (op && !A && !B && !T) {
+      codeList = ['PUSH BP', 'MOV BP,SP', 'SUB SP'];
+      isInFunDefine = true;//之后的语句都属于 函数体
+      funName = op;
+      funCodeTable[op] = [];
     }
     //赋值语句
     else if (op === '=') {
@@ -506,13 +588,27 @@ export function generateTargetCode(formulaTable: FourItemFormulaTable, symbolTab
       codeList = generateNot(item, symbolTableUtil);
       console.log('转换 NOT', codeList);
     }
+    if (!isInFunDefine)
+      asmCodeTable.push({
+        number: index + 1,
+        codeList
+      })
+    else {
+      funCodeTable[funName].push(...codeList)
+      if (op === 'ret') {
+        isInFunDefine = false;//return 语句保存之后 结束函数定义
+      }
+    }
 
-    asmCodeTable.push({
-      number: index + 1,
-      codeList
-    })
   })
-  logCodeTable(asmCodeTable)
+  // console.log('主要 汇编代码');
+  // logCodeTable(asmCodeTable);
+  // console.log('函数定义 汇编代码');
+  // logCodeTable(funCodeTable);
+  const final = generateFinalCode(asmCodeTable, funCodeTable);
+  // console.log('最终 汇编代码');
+  // console.log(final);
+  return final;
 
 }
 

@@ -2,7 +2,7 @@ import React, { memo, useState } from 'react';
 import { Button, Modal, notification, Popover, Row, Col, Empty } from 'antd';
 import { TokenItem } from '../../types/compiler';
 import { syntaxAnalyse, SyntaxAnaluseResult } from '../../core/syntaxAnalyse';
-import SyntaxTree from '../../components/SyntaxTree';
+import MermaidGraph from '../../components/MermaidGraph';
 import SyntaxResult from '../../components/SyntaxResult';
 interface Props {
   tokenList: TokenItem[];
@@ -68,7 +68,7 @@ const SyntaxAnalyseTab: React.FC<Props> = ({ tokenList, dispatch }) => {
         </Col>
       </Row>
       <Modal visible={treeVisible} onCancel={() => setVisible(false)} title="语法分析树" footer={null} width="80%">
-        <SyntaxTree graphContent={analyseResult?.graphContent || ''} />
+        <MermaidGraph graphContent={analyseResult?.graphContent || ''} />
       </Modal>
       {analyseResult ? <SyntaxResult syntaxResult={analyseResult} /> : <Empty />}
     </>

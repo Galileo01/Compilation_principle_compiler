@@ -130,6 +130,17 @@ export class Sponser {
 export interface SponserObject {
   [nonName: string]: Sponser;
 }
+//扩展 产生时 用于 算符 优先
+export class SponserEx {
+  candidateList: Candidate[] = []; // 候选式 数组
+  FirstVT: Set<string> = new Set(); // FirstVT 集合
+  LastVT: Set<string> = new Set(); // FollowVT 集合
+}
+export interface SponserExObject {
+  [nonName: string]: SponserEx;
+}
+
+
 //语法树的 节点
 export interface SyntaxTreeNode {
   name: string,
@@ -147,3 +158,4 @@ export interface TerminalPosition {
 }
 //语义 分析 
 export { SymbolTable, ExtendTreeNode, SymbolTableUtil } from '../core/semanticAnalyse'
+

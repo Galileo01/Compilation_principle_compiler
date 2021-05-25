@@ -10,6 +10,11 @@ import LexicalAnalyseTab from '../LexicalAnalyseTab';
 import SyntaxAnalyseTab from '../SyntaxAnalyseTab';
 import SemanticAnalyseTab from '../SemanticAnalyseTab';
 import TranslateTransitionalTab from '../TranslateTransitionalTab';
+//扩展 算法 tab
+import OpratorPriorityModal from '../OpratorPriorityModal';
+import DAGOptimizeModal from '../DAGOptimizeModal';
+import LRAnalyseModal from '../LRAnalyseModal';
+import NFADFA from '../NFADFA';
 import './index.less';
 const { dialog } = remote;
 interface StateType {
@@ -66,6 +71,12 @@ export default function Index() {
   });
 
   const [state, dispatch] = useReducer(reducer, initialState);
+  //扩展 算法modal
+
+  const [isOPMVisible, setOPMVisible] = useState(false);
+  const [isDAGMVisible, setDAGMVisible] = useState(false);
+  const [isLRMVisible, setLRMVisible] = useState(false);
+  const [isNDMVisibe, setDNMVisible] = useState(false);
 
   // 添加 tab
   async function openFile() {
@@ -117,9 +128,21 @@ export default function Index() {
           content: '',
         });
         break;
+      //扩展算法
+      case 'NFA':
+        setDNMVisible(true);
+        break;
+      case 'oprator_priority':
+        setOPMVisible(true);
+        break;
+      case 'DAG':
+        setDAGMVisible(true);
+        break;
+      case 'LR':
+        setLRMVisible(true);
+        break;
     }
   }
-
   // 编辑内容
   function editContent(content: string) {
     setTabInfo({
@@ -127,7 +150,6 @@ export default function Index() {
       content,
     });
   }
-
   return (
     <div id="index">
       <Row className="topBtns" align="middle">
@@ -137,11 +159,12 @@ export default function Index() {
             <Menu.Item key="save">保存</Menu.Item>
             <Menu.Item key="reset">重置所有</Menu.Item>
           </Menu.SubMenu>
-          <Menu.SubMenu title="Btn1">
-            {/* <Menu.Item key="lexical_analyse">词法分析</Menu.Item>
-            <Menu.Item key="syntax_analyse">语法</Menu.Item> */}
+          <Menu.SubMenu title="扩展算法">
+            <Menu.Item key="NFA">NFA相关算法</Menu.Item>
+            <Menu.Item key="oprator_priority">算符优先分析法</Menu.Item>
+            <Menu.Item key="LR">LR分析</Menu.Item>
+            <Menu.Item key="DAG">DAG优化基本块</Menu.Item>
           </Menu.SubMenu>
-          <Menu.SubMenu title="Btn2" />
         </Menu>
       </Row>
       <main className="content">
@@ -176,6 +199,31 @@ export default function Index() {
           </Col>
         </Row>
       </main>
+      {/* 扩展 算法的 对话框 */}
+      <OpratorPriorityModal
+        visible={isOPMVisible}
+        onClose={() => {
+          setOPMVisible(false);
+        }}
+      />
+      <DAGOptimizeModal
+        visible={isDAGMVisible}
+        onClose={() => {
+          setDAGMVisible(false);
+        }}
+      />
+      <LRAnalyseModal
+        visible={isLRMVisible}
+        onClose={() => {
+          setLRMVisible(false);
+        }}
+      />
+      <NFADFA
+        visible={isNDMVisibe}
+        onClose={() => {
+          setDNMVisible(false);
+        }}
+      />
     </div>
   );
 }

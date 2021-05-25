@@ -352,7 +352,7 @@ function preDeclareFunParams(symbolTableUtil: SymbolTableUtil, repeatedPropsList
 
 //暂时 无意义的字符
 const invalidCharReg = /^[\,\;\+\-\*\/\%\(\)]$/;
-
+const ops = ['||', '&&', '!', '<', '>', '<=', '>=', '==', '!=', '*', '/', '-', '+', '%', '(', ')'];//符号
 //处理 一个 右侧表达式   的语义 错误 1.赋值语句/ 也包含 变量初始化  2. 函数return
 function handleRightExpression(symbolTableUtil: SymbolTableUtil, scope: string, rightPropsLIst: RepeatedItem[], leftValueType: string, expressType: 'SET' | 'RETURN' = 'SET'): SemanticError[] {
   console.log('处理右侧表达式', rightPropsLIst);
@@ -360,7 +360,7 @@ function handleRightExpression(symbolTableUtil: SymbolTableUtil, scope: string, 
   const errorList: SemanticError[] = [];
   for (const { idName: rightIdName, value, isFunCall, terminalId } of rightPropsLIst) {
     const position = getTerminalPositionById(terminalId as number);
-    if (value && invalidCharReg.test(value))
+    if (value && (invalidCharReg.test(value) || ops.includes(value)))
       continue;
     //是 变量 非函数
     if (rightIdName && !isFunCall) {

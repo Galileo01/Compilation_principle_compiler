@@ -1,0 +1,122 @@
+progress'
+:progress
+;
+progress
+:sentence_graph
+;
+sentence_graph
+:sentence
+|sentence sentence_graph
+;
+sentence
+:declare_sentence
+|run_sentence
+;
+run_sentence
+:control_sentence
+|assign_sentence
+;
+assign_sentence
+:assign_expression ;
+;
+assign_expression
+:id = expression
+;
+control_sentence
+:if_sentence
+|while_sentence
+|for_sentence
+;
+if_sentence
+:if_exp
+|if_exp else { sentence_graph }
+;
+if_exp
+:if ( expression ) { sentence_graph }
+;
+while_sentence
+:while ( expression ) { sentence_graph }
+;
+for_sentence
+:for ( )
+;
+declare_sentence
+:value_declare
+;
+value_declare
+:const_declare
+|var_declare
+;
+const_declare
+:const type const_graph
+;
+type
+:int
+|char
+|float
+;
+const_graph
+:id = const ;
+|id = const , const_graph
+;
+var_declare
+:type var_graph
+;
+var_graph
+:single_var ;
+|single_var , var_graph
+;
+single_var
+:var
+|var = expression
+;
+expression
+:bool_expression
+;
+bool_expression
+:bool_item || bool_expression
+|bool_item
+;
+bool_item
+:bool_factor && bool_item
+|bool_factor
+;
+bool_factor
+:arith_expression
+|relate_expression
+|! bool_expression
+;
+arith_expression
+:item
+|item + arith_expression
+|item - arith_expression
+;
+relate_expression
+:arith_expression relate_opretor arith_expression
+;
+relate_opretor
+:>
+|<
+|>=
+|<=
+|==
+|!=
+;
+item
+:factor * item
+|factor / item
+|factor % item
+|factor
+;
+factor
+:( arith_expression )
+|const
+|var
+;
+const
+:char_const
+|num_const
+;
+var
+:id
+;

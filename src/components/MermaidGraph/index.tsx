@@ -4,7 +4,7 @@ interface Props {
   graphContent: string; //画图语法的 内容
 }
 //语法树组件
-const SyntaxTree: React.FC<Props> = ({ graphContent }) => {
+const MermaidGraph: React.FC<Props> = ({ graphContent }) => {
   console.log('render Tree');
 
   const [html, setHtml] = useState('');
@@ -29,4 +29,4 @@ const SyntaxTree: React.FC<Props> = ({ graphContent }) => {
   );
 };
 
-export default SyntaxTree;
+export default MermaidGraph;
