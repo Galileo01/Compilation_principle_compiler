@@ -93,7 +93,13 @@ const SematicAnalyseTab: React.FC<Props> = ({ syntaxTree, dispatch, symbolTableU
           </Button>
         </Col>
         <Col span={2} offset={3}>
-          <Button onClick={() => setResult(null)} disabled={!analyseResult} type="dashed">
+          <Button
+            onClick={() => {
+              setResult(null);
+              setType('transitional');
+            }}
+            disabled={!analyseResult}
+            type="dashed">
             重置
           </Button>
         </Col>

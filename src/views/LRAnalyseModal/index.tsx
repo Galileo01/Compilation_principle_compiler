@@ -15,7 +15,7 @@ const LRAnalyseModal: React.FC<ModalComProps> = ({ visible, onClose }) => {
   const [table, setTable] = useState<string[][]>([]);
   function analyse() {
     setSpinning(true);
-    const python3 = spawn('python3', ['src/views/LRAnalyseModal/LR/treeDraw.py', 'code']);
+    const python3 = spawn('python3', ['src/views/LRAnalyseModal/LR/treeDraw.py', code]);
     python3.stdout.on('data', data => {
       const str = `${data}`;
       const { table } = generateSponsorList(str);
@@ -32,6 +32,7 @@ const LRAnalyseModal: React.FC<ModalComProps> = ({ visible, onClose }) => {
       notification.error({
         message: '分析出错',
       });
+      setSpinning(false);
     });
 
     python3.on('close', code => {

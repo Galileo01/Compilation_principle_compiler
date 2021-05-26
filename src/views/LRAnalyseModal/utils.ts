@@ -1,5 +1,6 @@
 export default function generateSponsorList(str: string) {
-  const lines = str.split('\n').filter(item => item.length > 0);
+  const lines = str.split('\n').filter(item => item.length > 1);
+  console.log(lines);
   let maxCount = 0;
   const table: string[][] = []
   lines.forEach(line => {

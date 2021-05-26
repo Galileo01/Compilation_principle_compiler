@@ -57,7 +57,8 @@ class treeDraw:
         print(target)
 
 if __name__ == '__main__':
-    tar = 'if ( id < num_const ) { int id ; id = num_const ; } #'
+    # tar = 'if ( id < num_const ) { int id ; id = num_const ; } #'
+    tar=sys.argv[1]
     target = tar.split()
     grammarCon = getGrammar.getGrammar('/Users/bytedance/My/编译原理/compiler/src/views/LRAnalyseModal/LR/LR_grammar.txt')
     grammar = grammarCon.getContent()
